@@ -1,55 +1,2286 @@
-openapi: 3.1.0
+openapi: 3.0.0
 info:
-  version: 1.0.0
-  title: Example.com
-  termsOfService: 'https://example.com/terms/'
-  contact:
-    email: contact@example.com
-    url: 'http://example.com/contact'
-  license:
-    name: Apache 2.0
-    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-  x-logo:
-    url: 'https://redocly.github.io/openapi-template/logo.png'
-  description:
-    $ref: ./info-description.md
-tags:
-  - name: Echo
-    description: Example echo operations.
-  - name: User
-    description: Operations about users.
-  - name: Tag
-    description: This is a tag description.
-servers:
-  - url: 'https://{tenant}/api/v1'
-    variables:
-      tenant:
-        default: www
-        description: Your tenant id
-  - url: 'https://example.com/api/v1'
+  title: charges
+  version: 'v3'
+  description: |
+    These methods are for payment verification and charge / credit processing, as well as charge / credit history
+  servers:
+    -
+      url: https://{server.com}/api/v3    
 paths:
-  '/users/{username}':
-    $ref: 'paths/users_{username}.yaml'
-  /echo:
-    $ref: paths/echo.yaml
-  /pathItem:
-    $ref: paths/path-item.yaml
-  /pathItemWithExamples:
-    $ref: paths/path-item-with-examples.yaml
+  /charges/{id}:
+    x-amf-displayName: Get a charge / credit
+    get:
+      operationId: Get Charge
+      description: |
+        This method retrieves a Charge or Credit, using the ID assigned by merchant (or generated, if no ID was provided)
+      parameters:
+        -
+          name: id
+          required: true
+          in: path
+          schema:
+            title: The ID of an existing Charge / credit.
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: |
+            This method retrieves a single charge / credit by ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargeResponse"
+        "400":
+          description: |
+            When the API fails it will return `400`.  Details about the specific cause of the failure
+            can be determined from the response body.
+
+            * `10001` InvalidOwnershipException
+            * `10002` MismatchingParametersException
+            * `10003` IllegalPropertyException
+            * `10004` KeyGenerationException
+            * `10005` ValidationException
+          content:
+            application/json:
+              schema:
+                example:
+                  error:
+                    code: "990002"
+                    message: Need accessKey or signature for authentication
+                    uuid: 1df2d92a-aa30-4471-9127-0f458462b133
+      security: 
+        - apiKey: []
+          appId:  []
+    post:
+      operationId: Update Charge
+      description: |
+        This method updates an existing Charge / Credit by issuing a new command to it.
+      parameters:
+        -
+          name: id
+          required: true
+          in: path
+          schema:
+            title: The ID of an existing Charge / credit.
+            type: string
+            minLength: 1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChargeUpdate"
+      responses:
+        "200":
+          description: |
+            This method updates a single charge / credit by ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargeResponse"
+        "400":
+          description: |
+            When the API fails it will return `400`.  Details about the specific cause of the failure
+            can be determined from the response body.
+
+            * `10001` InvalidOwnershipException
+            * `10002` MismatchingParametersException
+            * `10003` IllegalPropertyException
+            * `10004` KeyGenerationException
+            * `10005` ValidationException
+          content:
+            application/json:
+              schema:
+                example:
+                  error:
+                    code: "990002"
+                    message: Need accessKey or signature for authentication
+                    uuid: 1df2d92a-aa30-4471-9127-0f458462b133
+      security:
+        -
+          hmac_header: []
+  /charges:
+    x-amf-displayName: Submit Charge, Searching Charges / Credits
+    get:
+      operationId: Search Charges/Credits
+      description: This method retrieves a list of charges / Credits, based on the filter criteria.
+      parameters:
+        -
+          name: id
+          in: query
+          schema:
+            title: The id of a specific charge / credit.
+            type: string
+            maxLength: 255
+        -
+          name: customerId
+          in: query
+          schema:
+            title: The merchant provided ID of the customer this charge / credit belong to.
+            type: string
+            maxLength: 255
+        -
+          name: customerEmail
+          in: query
+          schema:
+            title: The Customer Email of charge / credit.
+            type: string
+            maxLength: 255
+        -
+          name: lgId
+          in: query
+          schema:
+            title: The lgId is the internal system generated long integer id of the charge / credit entity
+            type: string
+            maxLength: 255
+        -
+          name: numberOfInstallments
+          in: query
+          schema:
+            title: Returns charges that have installments included. 'all' indicates any number of installments. Examples include "3", "3,4".
+            type: string
+            maxLength: 255
+        -
+          name: orderStates
+          description: optional but if specified must be a list of one or more separated by commas
+          in: query
+          schema:
+            title: Return only with one of the specified order states.
+            description: optional but if specified must be a list of one or more separated by commas
+            enum:
+              - SUBMITTED
+              - CHARGED
+              - AUTHORIZED
+              - FUNDS\_AUTHORIZED
+              - REFUNDED
+              - CHARGED\_BACK
+              - CHARGEBACK\_REVERSED
+              - CREDITED
+              - CREATED
+            type: string
+        -
+          name: createdAfter
+          in: query
+          schema:
+            title: Return only created after this date. ISO-8601 format YYYY-MM-DDThh:mm:ssZ Example 2016-11-24T12:34:56Z See also <a href="#/docs/tutorials/docs-tutorial-rest-api">REST API Tutorial</a>
+            type: string
+            format: date-time
+        -
+          name: createdBefore
+          in: query
+          schema:
+            title: Return only created before this date. ISO-8601 format YYYY-MM-DDThh:mm:ssZ Example 2016-11-24T12:34:56Z See also <a href="#/docs/tutorials/docs-tutorial-rest-api">REST API Tutorial</a>
+            type: string
+            format: date-time
+        -
+          name: modifiedAfter
+          in: query
+          schema:
+            title: Return only modified after this date. ISO-8601 format YYYY-MM-DDThh:mm:ssZ Example 2016-11-24T12:34:56Z See also <a href="#/docs/tutorials/docs-tutorial-rest-api">REST API Tutorial</a>
+            type: string
+            format: date-time
+        -
+          name: modifiedBefore
+          in: query
+          schema:
+            title: Return only modified before this date. ISO-8601 format YYYY-MM-DDThh:mm:ssZ Example 2016-11-24T12:34:56Z See also <a href="#/docs/tutorials/docs-tutorial-rest-api">REST API Tutorial</a>
+            type: string
+            format: date-time
+        -
+          name: paymentMethod
+          in: query
+          schema:
+            title: Return only for the specified payment method
+            enum:
+              - VISA
+              - MASTERCARD
+              - AMERICAN\_EXPRESS
+              - DISCOVER
+              - BOLETTO
+              - IDEAL
+            type: string
+        -
+          name: paymentType
+          in: query
+          schema:
+            title: Return only for the specified payment type
+            enum:
+              - CREDIT_CARD
+              - DEBIT_CARD
+              - PREPAID_CARD
+              - BANK_TRANSFER
+              - VIRTUAL_ACCOUNT
+              - DIRECT_DEBIT
+              - CASH
+              - CHECK
+              - OFFER
+              - WALLET
+              - CARRIER_BILLING
+            type: string
+        -
+          name: currency
+          in: query
+          schema:
+            title: Search by the currency. Must be a 3-character ISO 4217 currency code e.g. USD.
+            type: string
+        -
+          name: gatewayProvidedId
+          in: query
+          schema:
+            title: Search by gateway provided ID.
+            type: string
+        -
+          name: properties
+          description: |
+            A comma separated list of name/value pairs in the form of "name1=value1,name2=value2".
+          in: query
+          schema:
+            title: Properties of the charges / credits to filter. The result offers must match all properties given.
+            description: |
+              A comma separated list of name/value pairs in the form of "name1=value1,name2=value2".
+            type: string
+            pattern: ^\w+=\w+$
+        -
+          name: sort
+          description: |
+            A comma separated parameter name and sort direction e.g. lastModified,desc or status,asc
+          in: query
+          schema:
+            title: Sort result by parameters.
+            description: |
+              A comma separated parameter name and sort direction e.g. lastModified,desc or status,asc
+            type: string
+            pattern: ^\w+[,ASC|,DESC]*$
+        -
+          name: page
+          required: false
+          in: query
+          schema:
+            title: Starting index of results to fetch
+            default: 0
+            type: integer
+            minimum: 0
+        -
+          name: size
+          required: false
+          in: query
+          schema:
+            title: Size of the block to fetch
+            default: 10
+            type: integer
+        -
+          name: includeCount
+          description: |
+            boolean which is set to true if total result set count is needed for pagination. Counting the total may
+            cause a slower response, so set this to true if you do not need to know what the total count is.
+          required: false
+          in: query
+          schema:
+            title: Return total result set count
+            description: |
+              boolean which is set to true if total result set count is needed for pagination. Counting the total may
+              cause a slower response, so set this to true if you do not need to know what the total count is.
+            default: false
+            type: boolean
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Charges"
+        "400":
+          description: |
+            When the API fails it will return `400`.  Details about the specific cause of the failure
+            can be determined from the response body.
+
+            * `10001` InvalidOwnershipException
+            * `10002` MismatchingParametersException
+            * `10003` IllegalPropertyException
+            * `10004` KeyGenerationException
+            * `10005` ValidationException
+          content:
+            application/json:
+              schema:
+                example:
+                  error:
+                    code: "990002"
+                    message: Need accessKey or signature for authentication
+                    uuid: 1df2d92a-aa30-4471-9127-0f458462b133
+      security:
+        -
+          hmac_header: []
+    post:
+      operationId: Submit Charge
+      description: |
+        This method attempts to charge a customer the specified amount. If the customer does not already exist, a new
+        customer will be created.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChargeCreate"
+      responses:
+        "201":
+          description: a `201` status indicates the charge was successfully created; however, it might not have been successfully charged yet.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargeResponse"
+        "400":
+          description: |
+            When the API fails it will return `400`.  Details about the specific cause of the failure
+            can be determined from the response body.
+
+            * `10001` InvalidOwnershipException
+            * `10002` MismatchingParametersException
+            * `10003` IllegalPropertyException
+            * `10004` KeyGenerationException
+            * `10005` ValidationException
+          content:
+            application/json:
+              schema:
+                example:
+                  error:
+                    code: "990002"
+                    message: Need accessKey or signature for authentication
+                    uuid: 1df2d92a-aa30-4471-9127-0f458462b133
+      security:
+        -
+          hmac_header: []
+  /credits:
+    x-amf-displayName: Submit Credit
+    post:
+      operationId: Submit Credit
+      description: |
+        This method attempts to credit a customer the specified amount. If the customer does not already exist, a new
+        customer will be created.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreditCreate"
+      responses:
+        "201":
+          description: a `201` status indicates the charge was successfully created; however, it might not have been successfully credited yet.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargeResponse"
+        "400":
+          description: |
+            When the API fails it will return `400`.  Details about the specific cause of the failure
+            can be determined from the response body.
+
+            * `10001` InvalidOwnershipException
+            * `10002` MismatchingParametersException
+            * `10003` IllegalPropertyException
+            * `10004` KeyGenerationException
+            * `10005` ValidationException
+          content:
+            application/json:
+              schema:
+                example:
+                  error:
+                    code: "990002"
+                    message: Need accessKey or signature for authentication
+                    uuid: 1df2d92a-aa30-4471-9127-0f458462b133
+      security:
+        -
+          hmac_header: []
+  /charges/{id}/taxinvoice:
+    x-amf-displayName: tax invoices for charge
+    get:
+      operationId: Search Tax Invoices
+      description: |
+        This method retrieves list of tax invoices stored as part of a specific charge.
+      parameters:
+        -
+          name: id
+          required: true
+          in: path
+          schema:
+            title: The ID of an existing charge for which list of tax invoices are needed
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: |
+            This method retrieves list of tax invoices stored as part of a specific charge.
+          content:
+            application/json:
+              schema:
+                example:
+                  taxInvoices:
+                    -
+                      id: "2021"
+                      transactionId: "66934"
+                      transactionType: CHARGE
+                      status: COMPLETE
+                    -
+                      id: "2022"
+                      transactionId: "66935"
+                      transactionType: REFUND
+                      status: COMPLETE
+                type: object
+                additionalProperties: true
+                required:
+                  - taxInvoices
+                properties:
+                  taxInvoices:
+                    description: This is an array of tax invoices stored as part of a specific charge.
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/InvoiceResponse"
+        "400":
+          description: |
+            When the API fails it will return `400`.  Details about the specific cause of the failure
+            can be determined from the response body.
+
+            * `10001` InvalidOwnershipException
+            * `10002` MismatchingParametersException
+            * `10003` IllegalPropertyException
+            * `10004` KeyGenerationException
+            * `10005` ValidationException
+          content:
+            application/json:
+              schema:
+                example:
+                  error:
+                    code: "990002"
+                    message: Need accessKey or signature for authentication
+                    uuid: 1df2d92a-aa30-4471-9127-0f458462b133
+      security:
+        -
+          hmac_header: []
+  /charges/{id}/taxinvoice/{taxInvoiceId}:
+    x-amf-displayName: Download tax invoice
+    get:
+      operationId: Get Tax Invoice
+      description: |
+        This method downloads a specific tax invoice for an existing transaction.
+      parameters:
+        -
+          name: id
+          required: true
+          in: path
+          schema:
+            title: The ID of an existing charge
+            type: string
+            minLength: 1
+        -
+          name: taxInvoiceId
+          required: true
+          in: path
+          schema:
+            title: The ID of the tax invoice
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: |
+            This method downloads a specific tax invoice for an existing transaction.
+          content:
+            application/json:
+              schema: {}
+        "400":
+          description: |
+            When the API fails it will return `400`.  Details about the specific cause of the failure
+            can be determined from the response body.
+
+            * `10001` InvalidOwnershipException
+            * `10002` MismatchingParametersException
+            * `10003` IllegalPropertyException
+            * `10004` KeyGenerationException
+            * `10005` ValidationException
+          content:
+            application/json:
+              schema:
+                example:
+                  error:
+                    code: "990002"
+                    message: Need accessKey or signature for authentication
+                    uuid: 1df2d92a-aa30-4471-9127-0f458462b133
+      security:
+        -
+          hmac_header: []
+  /charges/{chargeId}/refundAvailable:
+    x-amf-displayName: Refund available for charge
+    get:
+      summary: retrieves the refundable amount
+      description: |
+        <p>This method retrieves the refundable amount , refundable base line item amount, and refundable tax for a charge <code>RefundInfoDto</code></p> <p>The refundAmount passed in is interpreted relative to the charge.  If the charge is tax included, then the refunt amount would include tax. If the charge is tax not included then the refunt amount is the base line item amount.</p>
+      parameters:
+        -
+          name: refundAmount
+          required: true
+          in: query
+          schema:
+            title: Check if the amount is available for refund.  This amount is interpreted relative to the charge.  This example is tax not included.
+            example: 12.34
+            type: number
+        -
+          name: chargeId
+          required: true
+          in: path
+          schema:
+            title: The charge Id of an existing charge.
+            example: EP_af775a25-fc49-47b3-9287-27b83efff622
+            type: string
+      responses:
+        "200":
+          description: |
+            Response Refund Information, <code>RefundInfoDto</code>.
+          content:
+            application/json:
+              schema:
+                example:
+                  chargeId: EP_af775a25-fc49-47b3-9287-27b83efff622
+                  refundableAmount: 13.57
+                  refuntableBasLineItemAmount: 12.34
+                  refundableTaxAmount: 1.23
+                  refundable: true
+        "404":
+          description: Not Found
+      security:
+        -
+          hmac_header: []
 components:
+  schemas:
+    ChargeResponse:
+      description: |
+        This charge format is returned for the response body when
+        * creating a new charge with `POST charges`
+        * creating a new credit with `POST credits`
+        * updating an existing charge with `POST charges/{id}`
+        * retrieving an existing charge with `GET charges/{id}`
+        * receiving real-time notifications
+
+        *Note: This section describes `ChargeFormatV3_2`.  The system can upgrade your configuration to this latest format when desired.*
+      x-amf-examples:
+        creditCardOneTimePurchase:
+          displayName: example response body for credit card one time purchase
+          value:
+            type: v3_2
+            id: AL_118
+            LGID: 8722
+            status: CHARGED
+            merchantAccount: SAMPLE
+            customer:
+              id: TestUser
+              ipAddress: 103.220.40.188
+              name: TestUser
+              country: BR
+            lineItem:
+              amount: 10.00
+              currency: BRL
+              description: 5 Golden Rings
+              quantity: 1
+              deliveryMethod: Online delivery
+              taxCode: DG
+              taxIncludedInPrice: true
+              taxPercent: 0.17
+            payment:
+              paymentType: CREDIT_CARD
+              paymentMethod: VISA
+              firstName: Jose
+              lastName: da Silva
+              streetAddress: Rua Itapeva 574
+              city: Sao Paulo
+              stateProvince: SP
+              postalCode: "01332000"
+              countryCode: BR
+              emailAddress: example@xyz.com
+              phoneNumber: "31988888860"
+              documentType: CPF
+              document: ""
+              cardType: VISA
+              cardNumber: XXXXXXXXXXXX1111
+              expirationDate: 2022-06
+              resendPin: false
+            metadata:
+              instrumentConfigId: 1100033
+            memo: this is sample Memo..
+            transactions:
+              -
+                timestamp: 2017-06-28T07:03:25Z
+                gatewayProvidedId: 8a8294495ccfbe99015ced82f6873e80
+                LGID: 7612
+                type: CHARGE
+                state: APPROVED
+                amount: 10.00
+                amountInUsd: 3.02
+                currency: BRL
+                taxAmount: 1.48
+                resultCode: 100112
+                responseText: "[allpago] (-) Status: 90 (NEW), Reason: 00 (Successful Processing), Return: 000.100.112 (Request successfully processed in 'Merchant in Connector Test Mode')."
+                pspResultCode: 000.100.112
+                pspResponseText: "[allpago] (-) Status: 90 (NEW), Reason: 00 (Successful Processing), Return: 000.100.112 (Request successfully processed in 'Merchant in Connector Test Mode')."
+                method: VISA
+                methodType: CREDIT_CARD
+                instrumentConfigId: 1100033
+                gatewayDetailName: allpago
+            allowedCommands:
+              - REFUND
+              - CHARGEBACK
+              - UPDATE_STATUS
+            created: 2017-06-28T07:03:21Z
+            lastModified: 2017-06-28T07:03:25Z
+            command: CHARGE
+            reserved:
+              purchaseFlowVersion: PurchaseFlowV3
+            merchantAccountId: 31415926535
+        creditCardInitialRecurring:
+          displayName: example response body for credit card recurring purchase (initial charge)
+          description: |
+            This example response was created for an INITIAL recurring purchase with 3D-Secure verification.  Notice it includes a `paymentProfile` section with details
+            that can be used for subsequent RENEWAL purchases.
+          value:
+            type: v3_2
+            id: LG_ccac5083-4ec8-4e08-8de7-b20719bd2317
+            LGID: 27569
+            status: CHARGED
+            merchantAccount: wdev01Others
+            customer:
+              id: mercadouser
+              countryCode: BR
+              ipAddress: 73.70.153.62
+            lineItem:
+              amount: 100
+              currency: BRL
+              description: organic kittens
+              quantity: 1
+              deliveryMethod: Online delivery
+              taxCode: DG
+              taxIncludedInPrice: true
+              taxPercent: 0
+            payment:
+              paymentType: CREDIT_CARD
+              paymentMethod: CREDIT_CARD
+              countryCode: BR
+              emailAddress: test@emergenttechnologies.com
+              document: ""
+              cardNumber: XXXXXXXXXXXX5682
+              expirationDate: 2020-04
+              accountHolder: test
+            metadata:
+              returnURL: https://merchant.com/store/return/success
+              cancelURL: https://merchant.com/store/return/cancel
+              failureURL: https://merchant.com/store/return/failure
+              createStoredPaymentProfile: true
+              instrumentConfigId: 1109079
+              disableProxy: true
+            transactions:
+              -
+                timestamp: 2017-08-03T10:05:46Z
+                gatewayProvidedId: "4979080"
+                LGID: 38882
+                type: CHARGE
+                state: APPROVED
+                amount: 100
+                amountInUsd: 32.12
+                currency: BRL
+                taxAmount: 0
+                resultCode: 0
+                responseText: id=4979080 , status=approved , code=accredited , statusDetail=accredited , collectorId=263906985
+                pspResponseText: id=4979080 , status=approved , code=accredited , statusDetail=accredited , collectorId=263906985
+                method: CREDIT_CARD
+                methodType: CREDIT_CARD
+                instrumentConfigId: 1109079
+                gatewayDetailName: mercadopago
+            allowedCommands:
+              - REFUND
+              - CHARGEBACK
+              - UPDATE_STATUS
+            created: 2017-08-04T00:05:44Z
+            lastModified: 2017-08-04T00:05:46Z
+            recurrence:
+              type: INITIAL
+            command: CHARGE
+            reserved:
+              purchaseFlowVersion: PurchaseFlowV3
+            merchantAccountId: 1478368384212
+            paymentProfile:
+              id: "4823272138464696"
+              paymentMethodType: CREDIT_CARD
+              paymentMethod: CREDIT_CARD
+              type: INITIAL
+              state: VERIFIED
+        gstResponse:
+          displayName: example response body for GST
+          description: |
+            This example response was created for India when GST was enabled.
+          value:
+            type: v3_2
+            id: LG_8a298ae4-db9c-431f-abc9-d1f0965550f8
+            LGID: 1581135
+            status: CHARGED
+            merchantAccount: DashboardTest
+            customer:
+              id: payplus-paywall-gst-trial-vij-10
+              stateProvince: GA
+              countryCode: IN
+              email: vdhanapal@emergentpayments.net
+              ipAddress: 192.168.200.31
+              name: payplus-paywall-gst-trial-vij-10
+              customerType: B2C
+            lineItem:
+              amount: 7.99
+              currency: INR
+              description: automation-test
+              quantity: 1
+              deliveryMethod: Online delivery
+              taxCode: DG_LIC_SERVICE_SOFTWARE_DATABASE
+              taxIncludedInPrice: true
+              taxAmount: 1.22
+              baseAmount: 6.77
+              taxPercent: 0.18
+              taxDetail:
+                cgstPercent: 0
+                sgstPercent: 0
+                igstPercent: 0.18
+                cgstAmount: 0
+                sgstAmount: 0
+                igstAmount: 1.22
+            payment:
+              paymentType: CREDIT_CARD
+              paymentMethod: CREDIT_CARD
+              stateProvince: GA
+              countryCode: IN
+              emailAddress: vdhanapal@emergentpayments.net
+              cardNumber: XXXXXXXXXXXX1112
+              expirationDate: 2022-03
+              accountHolder: payplus-paywall-gst-trial-vij-10
+            metadata:
+              returnURL: http://sqatest01.corp.twofish.com/pwthree/return/session/Z_6RmkIvFW7Dqd6o52r1ueZHMh55YWOu/success
+              cancelURL: http://sqatest01.corp.twofish.com/pwthree/return/session/Z_6RmkIvFW7Dqd6o52r1ueZHMh55YWOu/cancel
+              pendingURL: http://sqatest01.corp.twofish.com/pwthree/return/session/Z_6RmkIvFW7Dqd6o52r1ueZHMh55YWOu/pending
+              failureURL: http://sqatest01.corp.twofish.com/pwthree/return/session/Z_6RmkIvFW7Dqd6o52r1ueZHMh55YWOu/failure
+              createStoredPaymentProfile: false
+              instrumentConfigId: 1137531
+              disableProxy: true
+              device: PC
+              userAgent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36
+              locale: en_US
+            transactions:
+              -
+                timestamp: 2017-11-29T17:05:24Z
+                gatewayProvidedId: XXXA1581135RnqA
+                LGID: 1722354
+                type: CHARGE
+                state: PENDING
+                amount: 7.99
+                amountInUsd: 0.12
+                currency: INR
+                resultCode: 200
+                responseText: "[citruspay] (200) Response: (200) Transaction Successful, txnId: XXXA1581135RnqA"
+                pspResultCode: "200"
+                pspResponseText: "[citruspay] (200) Response: (200) Transaction Successful, txnId: XXXA1581135RnqA"
+                method: VISA_DEBIT
+                methodType: DEBIT_CARD
+                instrumentConfigId: 1137531
+                gatewayDetailName: citruspay
+                gatewayConfigId: 1127936
+                responseMillis: 4150
+              -
+                timestamp: 2017-11-29T17:06:05Z
+                gatewayProvidedId: "2754126"
+                LGID: 1722355
+                type: CHARGE
+                state: APPROVED
+                amount: 7.99
+                amountInUsd: 0.12
+                currency: INR
+                taxAmount: 1.22
+                resultCode: 0
+                responseText: "[citruspay] (-) Response: (0) Transaction%20Successful, txRefNo: CTX1711300105246479903, transactionId: 2754126"
+                pspResultCode: "0"
+                pspResponseText: "[citruspay] (-) Response: (0) Transaction%20Successful, txRefNo: CTX1711300105246479903, transactionId: 2754126"
+                method: VISA_DEBIT
+                methodType: DEBIT_CARD
+                instrumentConfigId: 1137531
+            allowedCommands:
+              - REFUND
+              - CHARGEBACK
+              - UPDATE_STATUS
+            created: 2017-11-29T17:05:20Z
+            lastModified: 2017-11-29T17:06:05Z
+            command: CHARGE
+            taxInvoices:
+              -
+                id: "66"
+                transactionId: "1722355"
+                transactionType: CHARGE
+                status: COMPLETE
+            reserved:
+              purchaseFlowVersion: PurchaseFlowV3
+            merchantAccountId: 1471542513877
+      type: object
+      additionalProperties: true
+      required:
+        - lastModified
+        - transactions
+        - allowedCommands
+        - created
+        - customer
+        - lineItem
+        - LGID
+        - reserved
+        - command
+        - type
+        - merchantAccount
+        - payment
+        - status
+        - merchantAccountId
+      properties:
+        memo:
+          description: |
+            Metadata the merchant can store with the charge. The memo will be passed back with real-time notifications and included in transaction and settlement reports.
+            Recommended that merchant passes business data in this field.
+          type: string
+          maxLength: 255
+        taxAmountCorrected:
+          description: |
+            This flag indicates whether the tax percentage/amount given in the request is corrected or not.
+            This will appear in the response only if tax amount is corrected and is applicable only for India as of now.
+          type: boolean
+        idempotencyId:
+          description: |
+            If specified guarantees this same charge has not already been processed. This could be used if client wants to timeout and retry without having to check
+            status of previous charge submission. If first charge attempt was received, the retry will fail.
+          type: string
+          maxLength: 63
+        lastModified:
+          description: Time this charge was last modified in ISO-8601 format
+          type: string
+          format: date-time
+        transactions:
+          description: Historical details about this charge
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        paymentOption:
+          $ref: "#/components/schemas/PaymentOption"
+        allowedCommands:
+          description: List of commands that can be applied to this charge based on its current status.
+          type: array
+          items:
+            type: string
+        created:
+          description: Time this charge was first submitted in ISO-8601 format
+          type: string
+          format: date-time
+        customer:
+          $ref: "#/components/schemas/Customer"
+        lineItem:
+          $ref: "#/components/schemas/LineItem"
+        id:
+          description: |
+            Merchant provided id to uniquely identify the transaction. If not provided, EP system will generate a unique ID and return that in the response.
+            Recommended that merchant passes unique id in this field.
+          type: string
+          maxLength: 63
+        LGID:
+          description: Unique transaction ID generated by the system
+          type: integer
+        lineItemProperties:
+          description: |
+            Additional line item properties are sent as name/value pairs in a list in this format: <code>"{"lineItemProperties": [{ "quantity": "1","description": "Product 1 description", "deliveryMethod": "Included" },{ "quantity": "3", "description": "Product 2 description", "deliveryMethod": "Setup from My Account" }]}"</code>
+            Property names are case sensitive, so <code>'quantity'</code> is a different property than <code>'Quantity'</code>.
+          type: object
+          additionalProperties: true
+        properties:
+          description: |
+            Properties are sent as name/value pairs in this format: <code>"{"name1":"value1","name2":"value2"}"</code>
+            Property names are case sensitive, so <code>'Name1'</code> is a different property than <code>'name1'</code>.
+          type: object
+          additionalProperties: true
+        reserved:
+          description: For EP internal use
+          x-internal: true
+          type: object
+          additionalProperties: true
+          required:
+            - purchaseFlowVersion
+          properties:
+            purchaseFlowVersion:
+              description: For EP internal use
+              type: string
+        metadata:
+          $ref: "#/components/schemas/Metadata"
+        taxInvoices:
+          description: |
+            This is an array of tax invoices stored as part of a specific charge.
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceResponse"
+        paymentProfile:
+          $ref: "#/components/schemas/PaymentProfileStatus"
+        lineItemOriginal:
+          description: |
+            The line item original object records the original incoming tax details if the tax amounts/percents are
+            corrected based on the tax calculation on EP side.This will appear in the response only if tax amount is
+            corrected and is currently applicable only to India.
+          type: object
+          additionalProperties: true
+          required:
+            - amount
+            - currency
+            - description
+          properties:
+            taxCode:
+              description: |
+                One of the supported tax codes. If none is specified then the one configured as default by your EP TAM will be used.
+
+                * DG (Digital Good)
+                * VC (Virtual Currency)
+                * NT (Non Taxable)
+                * NA (Unknown)
+                * PG (Physical Goods)
+                * SV (Service)
+                * DG\_INTERNET\_ADS
+                * DG\_ONLINE\_CONTENT_SERVICE
+                * DG\_LIC\_SERVICE\_SOFTWARE_DATABASE
+              type: string
+              minLength: 2
+              maxLength: 64
+            taxProvider:
+              description: Indicates who calculated tax. Values include 'MERCHANT', 'ADAPTER', 'NONE'
+              enum:
+                - MERCHANT
+                - ADAPTER
+                - NONE
+              type: string
+            taxAmount:
+              description: Tax amount for this transaction.
+              type: number
+            amount:
+              description: The price of the goods being sold.  The customer will be charged this amount, plus any taxes that are not included in the price.
+              type: number
+            currency:
+              description: ISO 4217 Three letter currency code code for the transaction currency (USD, EUR,  JPY, etc)
+              type: string
+              minLength: 3
+              maxLength: 3
+            taxPercent:
+              description: Tax rate for this charge.
+              type: number
+              minimum: 0
+              maximum: 1
+            taxDetail:
+              description: |
+                Individual tax percents and their associated tax amounts can be sent as key value pairs.It is currently sent as
+                part of the response only for India to specify the tax split ups CGST,SGST,IGST.
+
+                Example for GST India:
+                ```
+                "taxDetail": {
+                    "cgstPercent": "0.09",
+                    "sgstPercent": "0.09",
+                    "igstPercent": "0.00",
+                    "cgstAmount": "18",
+                    "sgstAmount": "18",
+                    "igstAmount": "0.00"
+                  }
+                ```
+              type: object
+              additionalProperties: true
+            deliveryMethod:
+              description: The delivery method of the items.
+              type: string
+            baseAmount:
+              description: Transaction amount excluding taxes. Currently sent only for India and Argentina
+              type: number
+            taxIncludedInPrice:
+              description: True if tax is included in the amount.  If this field is not specified then then the value configured by your EP TAM will be used.
+              type: boolean
+            description:
+              description: Description of the items.
+              type: string
+              maxLength: 256
+            quantity:
+              description: The quantity of the items.
+              type: number
+        command:
+          description: The action most recently performed on charge request.
+          enum:
+            - CHARGE
+            - AUTHORIZE
+            - VERIFY
+          type: string
+        type:
+          description: API version. Always `v3_2` when `ChargeFormatV3_2` is configured.
+          enum:
+            - v3_0
+            - v3_1
+            - v3_2
+          type: string
+        merchantAccount:
+          description: Name of the merchant account
+          type: string
+        payment:
+          $ref: "#/components/schemas/Payment"
+        status:
+          description: |
+            Describes the status of the charge. Valid values:
+
+            * `AUTHORIZE_PENDING` a request was made to capture an amount with the `AUTHORIZE` command.  If present the
+            merchant must process the `charge.paymentOption` to advance the charge status; in other cases the
+            merchant just needs to wait until the next real-time notification indicating the processing is complete.
+            * `AUTHORIZED` the amount has been approved and can be captured by the merchant with the `SETTLE` command or
+            the funds can be released with the `AUTH_REVERSAL` command.
+            * `AUTH_REVERSED` the amount is no longer available for capture. This is a final status.
+            * `CANCELLED` the amount is not available because the customer cancelled the charge.  Not all processors and
+            methods support a CANCELLED status and for these the charge would end up as `DECLINED` or `ERROR`. This is a final status.
+            * `DECLINED` the amount is not available because the processor rejected the charge. This is a final status.
+            * `CHARGE_PENDING` a charge has been initiated and the request is awaiting a response from the PSP.
+            * `CHARGED` the amount has been captured and the purchased product can be released.
+            Note that partially refunded charges are in CHARGED status until they are fully refunded.
+            * `CHARGED_BACK` the customer has reclaimed the captured amount and it is no longer available.
+            * `CHARGEBACK_REVERSED` the amount has been disputed and recaptured after previously having been `CHARGED_BACK`.
+            * `CHARGEBACK_PENDING` a chargeback has been initiated by the customer but the funds have not been returned
+            * `REFUND_PENDING` a refund has been initiated (typically by the merchant) but the funds have not been returned
+            to the customer yet. The merchant just needs to wait until the next real-time notification indicating the processing is complete.
+            * `REFUNDED` a full refund has been initiated (typically by the merchant) and the funds have been returned to the customer.
+            Note that a partial refund will remain in the `CHARGED` status. This is a final status.
+            * `ERROR` the amount is not available for any reason. For details consider looking at the charge history in
+            the `transactions[]` section.  This is a final status.
+            * `CREDITED_PENDING` the credit is in progress.
+            * `CREDITED` the amount is credited to customer.
+          type: string
+        recurrence:
+          description: |
+            Recurrence fields are used for recurring transactions.
+            The initial charge must be done with the customer present and CVV must be supplied for credit cards.
+            The renewal is done subsequently without the customer present and CVV is not required for credit cards.
+          type: object
+          additionalProperties: true
+          required:
+            - type
+          properties:
+            type:
+              description: INITIAL is used to signify first transaction and subsequent recurring transactions should have type as RENEWAL.
+              enum:
+                - INITIAL
+                - RENEWAL
+              type: string
+        merchantAccountId:
+          description: For EP internal use
+          x-internal: true
+          type: integer
+    ChargeUpdate:
+      description: |
+        This charge format is used for the request body when updating an existing charge with `POST charges/{id}`.
+
+        *Note: This section describes `ChargeFormatV3_2`.  The system can upgrade your configuration to this latest format when desired.*
+      x-amf-examples:
+        refund:
+          displayName: example request body to initiate a partial refund
+          value:
+            command: REFUND
+            amount: 3.45
+            taxIncludedInPrice: true
+            memo: This will replace the previous memo
+            properties:
+              color: red
+              size: large
+      type: object
+      additionalProperties: true
+      properties:
+        command:
+          description: |
+            The action to perform on charge request.
+
+            * `SETTLE` completes a charge initiated with `AUTHORIZE`
+            * `AUTH_REVERSAL` cancels an `AUTHORIZE` and releases the reserved funds on the customer's credit card
+            * `CANCEL` cancels a transaction. Typically used to indicate a customer opting out of completing the purchase.
+            * `REFUND` refunds part of or all of a charge
+            * `CHARGEBACK` records a chargeback, if the payment provider does not send a notification that can be processed automatically
+            * `REVERSE_CHARGEBACK` reverses a chargeback, if the payment provider does not send a notification that can be processed automatically
+
+            Note commands `AUTHORIZE` and `CHARGE` are only used when submitting a new charge.
+          enum:
+            - CHARGE
+            - SETTLE
+            - AUTH_REVERSAL
+            - CANCEL
+            - REFUND
+            - CHARGEBACK
+            - REVERSE_CHARGEBACK
+          type: string
+        memo:
+          description: Optionally overwrites the memo associated with the charge.
+          type: string
+        amount:
+          description: |
+            Optional when used with a REFUND command to initiate a partial refund. If the amount specified is greater than the remaining balance
+            on the charge, then the refund will fail.
+          type: number
+        taxIncludedInPrice:
+          description: |
+            Optional when used with a REFUND command, indicates whether tax is included in the specified refund amount, default is taxIncludedInPrice=true
+          type: boolean
+        status:
+          description: |
+            Optional when used with a UPDATE\_STATUS command to force the Charge into a specific state.  The caller supplying this field must have the "charges.repair" permission.
+          x-internal: true
+          type: string
+        properties:
+          description: |
+            Optionally adds, edits or removes properties to the charge.  Properties are sent as name/value pairs in this format: <code>"{"name1":"value1","name2":"value2"}"</code>
+            To remove a property, set the value to either null or an empty string, as in <code>"name1": null</code> or <code>"name1":""</code>.
+            If you assign a new value to an existing property, the previous value will be overwritten. Property names are case sensitive, so <code>'Name1'</code> is a different
+            property than <code>'name1'</code>.
+          type: object
+          additionalProperties: true
+        idempotencyId:
+          description: |
+            If specified guarantees this same charge update has not already been processed. This could be used if client wants to timeout and retry without having to check
+            status of previous charge submission. When doing partial refunds, this will prevent potentially multiple refunds if the client should retry the refund on timeout.
+          type: string
+          maxLength: 63
+        chargebackDetails:
+          description: |
+            Optional chargeback reason and code in this format: <code>"{"chargebackReason"="Merchandise/Service Not Received", "chargebackReasonCode"="13.1"}"</code>
+            This value should only be specified when forcing the status to either CHARGEBACK_PENDING or CHARGEDBACK otherwise it will be ignored.
+          x-internal: true
+          type: object
+          additionalProperties: true
+    Charges:
+      description: |
+        This charge format is returned for the response body from `GET charges`. It is a pageable list of charges.
+
+        For additional details about the structure of an individual charge please see `GET charges/{id}`
+
+        *Note: This section describes `ChargeFormatV3_2`.  The system can upgrade your configuration to this latest format when desired.*
+      x-amf-examples:
+        emptyList:
+          displayName: example response body showing charges list container
+          value:
+            charges:
+              -
+                type: v3_2
+                id: LG_ccac5083-4ec8-4e08-8de7-b20719bd2317
+                LGID: 27569
+                status: CHARGED
+                merchantAccount: wdev01Others
+                customer:
+                  id: mercadouser
+                  countryCode: BR
+                  ipAddress: 73.70.153.62
+                lineItem:
+                  amount: 100
+                  currency: BRL
+                  description: organic kittens
+                  quantity: 1
+                  deliveryMethod: Online delivery
+                  taxCode: DG
+                  taxIncludedInPrice: true
+                  taxPercent: 0
+                payment:
+                  paymentType: CREDIT_CARD
+                  paymentMethod: CREDIT_CARD
+                  countryCode: BR
+                  emailAddress: test@emergenttechnologies.com
+                  document: ""
+                  cardNumber: XXXXXXXXXXXX5682
+                  expirationDate: 2020-04
+                  accountHolder: test
+                metadata:
+                  returnURL: https://merchant.com/store/return/success
+                  cancelURL: https://merchant.com/store/return/cancel
+                  failureURL: https://merchant.com/store/return/failure
+                  createStoredPaymentProfile: true
+                  instrumentConfigId: 1109079
+                  disableProxy: true
+                transactions:
+                  -
+                    timestamp: 2017-08-03T10:05:46Z
+                    gatewayProvidedId: "4979080"
+                    LGID: 38882
+                    type: CHARGE
+                    state: APPROVED
+                    amount: 100
+                    amountInUsd: 32.12
+                    currency: BRL
+                    taxAmount: 0
+                    resultCode: 0
+                    responseText: id=4979080 , status=approved , code=accredited , statusDetail=accredited , collectorId=263906985
+                    pspResponseText: id=4979080 , status=approved , code=accredited , statusDetail=accredited , collectorId=263906985
+                    method: CREDIT_CARD
+                    methodType: CREDIT_CARD
+                    instrumentConfigId: 1109079
+                    gatewayDetailName: mercadopago
+                allowedCommands:
+                  - REFUND
+                  - CHARGEBACK
+                  - UPDATE_STATUS
+                created: 2017-08-04T00:05:44Z
+                lastModified: 2017-08-04T00:05:46Z
+                recurrence:
+                  type: INITIAL
+                command: CHARGE
+                reserved:
+                  purchaseFlowVersion: PurchaseFlowV3
+                merchantAccountId: 1478368384212
+                paymentProfile:
+                  id: "4823272138464696"
+                  paymentMethodType: CREDIT_CARD
+                  paymentMethod: CREDIT_CARD
+                  type: INITIAL
+                  state: VERIFIED
+            total: 1
+            size: 10
+            page: 0
+            includeCount: true
+      type: object
+      additionalProperties: true
+      required:
+        - charges
+        - size
+        - page
+        - includeCount
+        - total
+      properties:
+        charges:
+          description: This is a list of charge objects satisfying the search criteria.
+          type: array
+          items:
+            $ref: "#/components/schemas/ChargeResponse"
+        size:
+          description: |
+            Size of the block to fetched. Set from the `size` query parameter.
+          type: integer
+        page:
+          description: |
+            Starting index of results to fetched.  Set from the `page` query parameter.
+          type: integer
+        includeCount:
+          description: |
+            Indicates if total result set count is accurate. Counting the total may cause a slower response. Set from the `includeCount` query parameter.
+          type: boolean
+        total:
+          description: |
+            Indicates the total result count.  The count may not be accurate if `includeCount` is not true.
+          type: integer
+    ChargeCreate:
+      description: |
+        This charge format is used for the request body when creating a new charge with `POST charges`.
+
+        *Note: This section describes `ChargeFormatV3_2`.  The system can upgrade your configuration to this latest format when desired.*
+      x-amf-examples:
+        creditCardOneTimePurchase:
+          displayName: example request body for credit card one time purchase
+          value:
+            command: CHARGE
+            id: AL_118
+            memo: this is sample Memo..
+            customer:
+              id: TestUser
+              ipAddress: 103.220.40.188
+            lineItem:
+              currency: BRL
+              amount: 10
+              description: 5 Golden Rings
+              quantity: 1
+              deliveryMethod: Online delivery
+              taxCode: DG
+              taxPercent: 0.17
+              taxIncludedInPrice: true
+            payment:
+              paymentMethod: VISA
+              countryCode: BR
+              stateProvince: SP
+              city: Sao Paulo
+              postalCode: "01332000"
+              emailAddress: example@xyz.com
+              cardType: VISA
+              firstName: Jose
+              lastName: da Silva
+              phoneNumber: "31988888860"
+              streetAddress: Rua Itapeva 574
+              cardNumber: "4111111111111111"
+              expirationDate: 2022-06
+              securityCode: "123"
+              document: "12345678909"
+              documentType: CPF
+        creditCardInitialRecurring:
+          displayName: example request body for credit card recurring purchase (initial charge)
+          description: |
+            This example request is for an INITIAL recurring purchase with 3D-Secure verification. Notice that it includes a `metadata` section with merchant
+            web page return URLs which will be used to complete the flow in conjunction with the `paymentOption` in the charge response in the case that
+            this customer has 3D-Secure enabled for their card.
+          value:
+            command: CHARGE
+            id: AL_131
+            memo: this is sample Memo..
+            recurrence:
+              type: INITIAL
+            customer:
+              id: TestUser
+              ipAddress: 103.220.40.188
+            lineItem:
+              currency: BRL
+              amount: 10
+              description: 1 Month Subscription
+              quantity: 1
+              deliveryMethod: Online delivery
+              taxCode: DG
+              taxPercent: 0.17
+              taxIncludedInPrice: true
+            payment:
+              paymentMethod: VISA
+              countryCode: BR
+              stateProvince: SP
+              city: SÃƒÂ£o Paulo
+              postalCode: "01332000"
+              emailAddress: example@xyz.com
+              cardType: VISA
+              firstName: Jose
+              lastName: da Silva
+              phoneNumber: "31988888860"
+              streetAddress: Rua Itapeva 574
+              cardNumber: "4111111111111111"
+              expirationDate: 2022-06
+              securityCode: "123"
+              document: "12345678909"
+              documentType: CPF
+            metadata:
+              returnURL: https://merchant.com/store/return/success
+              cancelURL: https://merchant.com/store/return/cancel
+              failureURL: https://merchant.com/store/return/failure
+      type: object
+      additionalProperties: true
+      required:
+        - command
+        - lineItem
+        - customer
+        - payment
+      properties:
+        command:
+          description: |
+            The action to perform on charge request.
+
+            * CHARGE performs an authorization and capture in one step.
+            * AUTHORIZE only performs funds authorization.
+            * VERIFY verifies the payment information by whatever means the gateway has at its disposal. This could involve an AUTHORIZE followed by a CANCEL
+                        or a CHARGE followed by a REFUND. The goal is to verify the payment method for later use with a 1-click purchase or a renewal purchase.
+          enum:
+            - CHARGE
+            - AUTHORIZE
+            - VERIFY
+          type: string
+        id:
+          description: |
+            Merchant provided id to uniquely identify the transaction. If not provided, EP system will generate a unique ID and return that in the response.
+            Recommended that merchant passes unique id in this field.
+          type: string
+          maxLength: 63
+        memo:
+          description: |
+            Metadata the merchant can store with the charge. The memo will be passed back with real-time notifications and included in transaction and settlement reports.
+            Recommended that merchant passes business data in this field.
+          type: string
+          maxLength: 255
+        properties:
+          description: |
+            Properties are sent as name/value pairs in this format: <code>"{"name1":"value1","name2":"value2"}"</code>
+            Property names are case sensitive, so <code>'Name1'</code> is a different property than <code>'name1'</code>.
+          type: object
+          additionalProperties: true
+        lineItemProperties:
+          description: |
+            Additional line item properties are sent as name/value pairs in a list in this format: <code>"{"lineItemProperties": [{ "quantity": "1","description": "Product 1 description", "deliveryMethod": "Included" },{ "quantity": "3", "description": "Product 2 description", "deliveryMethod": "Setup from My Account" }]}"</code>
+            Property names are case sensitive, so <code>'quantity'</code> is a different property than <code>'Quantity'</code>.
+          type: object
+          additionalProperties: true
+        recurrence:
+          description: |
+            Recurrence fields are used for recurring transactions.
+            The initial charge must be done with the customer present and CVV must be supplied for credit cards.
+            The renewal is done subsequently without the customer present and CVV is not required for credit cards.
+          type: object
+          additionalProperties: true
+          required:
+            - type
+          properties:
+            type:
+              description: INITIAL is used to signify first transaction and subsequent recurring transactions should have type as RENEWAL.
+              enum:
+                - INITIAL
+                - RENEWAL
+              type: string
+        idempotencyId:
+          description: |
+            If specified guarantees this same charge has not already been processed. This could be used if client wants to timeout and retry without having to check
+            status of previous charge submission. If first charge attempt was received, the retry will fail.
+          type: string
+          maxLength: 63
+        lineItem:
+          $ref: "#/components/schemas/LineItem"
+        customer:
+          $ref: "#/components/schemas/Customer"
+        payment:
+          $ref: "#/components/schemas/Payment"
+        metadata:
+          $ref: "#/components/schemas/Metadata"
+    CreditCreate:
+      description: |
+        This charge format is used for the request body when creating a new credit with `POST credits`.
+
+        *Note: The credit reuse  `ChargeFormatV3_2`.  The system can upgrade your configuration to this latest format when desired.*
+      x-amf-examples:
+        createACredit:
+          displayName: example request body for a credit request
+          value:
+            command: CREDIT
+            id: AL_118
+            memo: this is sample Memo..
+            customer:
+              id: TestUser
+              ipAddress: 103.220.40.188
+            lineItem:
+              currency: BRL
+              amount: 10
+              description: revert 5 Golden Rings
+            payment:
+              paymentMethod: CREDIT_CARD
+              countryCode: US
+              stateProvince: SP
+              city: Sao Paulo
+              postalCode: "01332000"
+              emailAddress: example@xyz.com
+              firstName: Jose
+              lastName: da Silva
+              storedPaymentProfileId: "31988888860"
+              streetAddress: Rua Itapeva 574
+      type: object
+      additionalProperties: true
+      required:
+        - command
+        - lineItem
+        - customer
+        - payment
+      properties:
+        command:
+          description: |
+            The action to perform on credit request.
+
+            * CREDIT is the only command allowed.
+          enum:
+            - CREDIT
+          type: string
+        id:
+          description: |
+            Merchant provided id to uniquely identify the transaction. If not provided, EP system will generate a unique ID and return that in the response.
+            Recommended that merchant passes unique id in this field.
+          type: string
+          maxLength: 63
+        memo:
+          description: |
+            Metadata the merchant can store with the credit. The memo will be passed back with real-time notifications and included in transaction and settlement reports.
+            Recommended that merchant passes business data in this field.
+          type: string
+          maxLength: 255
+        properties:
+          description: |
+            Properties are sent as name/value pairs in this format: <code>"{"name1":"value1","name2":"value2"}"</code>
+            Property names are case sensitive, so <code>'Name1'</code> is a different property than <code>'name1'</code>.
+          type: object
+          additionalProperties: true
+        lineItemProperties:
+          description: |
+            Additional line item properties are sent as name/value pairs in a list in this format: <code>"{"lineItemProperties": [{ "quantity": "1","description": "Product 1 description", "deliveryMethod": "Included" },{ "quantity": "3", "description": "Product 2 description", "deliveryMethod": "Setup from My Account" }]}"</code>
+            Property names are case sensitive, so <code>'quantity'</code> is a different property than <code>'Quantity'</code>.
+          type: object
+          additionalProperties: true
+        lineItem:
+          $ref: "#/components/schemas/LineItem"
+        customer:
+          $ref: "#/components/schemas/Customer"
+        payment:
+          $ref: "#/components/schemas/PaymentCredit"
+        metadata:
+          $ref: "#/components/schemas/Metadata"
+    InvoiceResponse:
+      description: |
+        Details about the tax invoice for a charge
+      type: object
+      additionalProperties: true
+      required:
+        - id
+        - transactionId
+        - transactionType
+        - status
+      properties:
+        id:
+          description: |
+            Unique tax invoice id
+          type: string
+        transactionId:
+          description: |
+            Unique transaction ID generated by the system for original charge.
+          type: string
+        transactionType:
+          description: |
+            States for which tax invoice was generated. Valid values are CHARGE,REFUND
+          type: string
+        status:
+          description: |
+            Status of the pdf generation. Valid values are INITIAL, COMPLETE
+          type: string
+    PaymentOption:
+      description: |
+        The `paymentOption` is returned in the `charge` whenever additional customer interaction is needed to complete the purchase.
+        Typically this is used for 3D-Secure and online banking verification.
+
+        __Important__ the `paymentOption` object is transient and not persisted with the charge; therefore, it must be processed by the merchant
+        directly from the `POST charges` response body.  It will not be available in subsequent `GET charges` or real-time notifications.
+      type: object
+      additionalProperties: true
+      required:
+        - type
+        - offsiteMethod
+      properties:
+        type:
+          description: |
+            _The value will always be `OFFSITE` for typical merchant use cases_.
+          enum:
+            - OFFSITE
+            - ONSITE
+            - LIGHT_BOX
+          x-internal: true
+          type: string
+        paymentServiceURL:
+          description: |
+            If present then the customer's browser should be redirected to this URL to complete the purchase. In most cases a simple
+            redirect (HTTP GET) is sufficient; however, for some payment methods the merchant will need to adjust the behavior based on other fields
+            such as `offsiteMethod` and `uiType`.
+
+            For typical use cases, when the verification steps are complete the customer's browser will be redirected back to the web page
+            that the merchant specified in the `charge.metadata.returnURL` field when the charge was first created with `POST charges`.
+
+            Note that depending on the flow the customer might not ever be redirected back to the merchant `returnURL`.  For example, if the
+            customer fails the off site verification the browser is typically redirected to the merchant `failureURL`.  In another example the
+            customer might close the browser and abandon the flow.  For these reasons the merchant should always rely on the real-time notifications
+            as the ultimate source of truth when evaluating if a charge was successful.
+          type: string
+        uiType:
+          description: |
+            This describes the constraints the off site web page.  The merchant should take these constraints into account when deciding how
+            to redirect the customer's browser to the `paymentServiceURL`.
+
+            * IFRAME and PRINT\_IFRAME indicate the off site has no constraints and should render properly regardless of if it is displayed in an IRAME, a pop-up browser, or
+            replaces the merchant content.
+            * POPUP\_WINDOW and PRINT indicate the off site will not render correctly in an IFRAME; the merchant must either open the URL in a new pop-up browser
+            window or must replace the merchant content so the URL opens in the top of the current frame.
+            * PRINT and PRINT\_IFRAME indicate the off site has no "return to merchant" UI element, for example when `paymentServiceURL` refers to a PDF file.
+          enum:
+            - IFRAME
+            - POPUP_WINDOW
+            - PRINT
+            - PRINT_IFRAME
+          type: string
+        windowWidth:
+          description: |
+            When specified this gives the minimum browser window content area width in pixels to provide the best customer experience for an off site flow.
+          type: integer
+        windowHeight:
+          description: |
+            When specified this gives the minimum browser window content area height in pixels to provide the best customer experience for an off site flow.
+          type: integer
+        offsiteMethod:
+          description: |
+            _With very few exceptions, the merchant can expect this value to be `GET` for most payment methods_.
+
+            Determines if the `paymentServiceURL` should be redirected to with a HTTP GET or a POST.
+          enum:
+            - GET
+            - POST
+          type: string
+        postForm:
+          description: |
+            _With very few exceptions, the merchant can expect there to be no postForm for most payment methods_.
+
+            When `offsiteMethod` is `POST` this field may contain a set of string value pairs in this format <code>"{"name1":"value1","name2":"value2"}"</code>.
+            If present then these should be used to build an HTTP FORM POST.
+
+            Example form built to redirect the customer's browser to an off site with a form post
+            ```
+              <form id="auto-post" action="paymentServiceUrl" method="offsiteMethod">
+                <input type="hidden" name="name1" value="value1">
+                <input type="hidden" name="name2" value="value2">
+              </form>
+
+              <script>
+                document.getElementById("auto-post").submit()
+              </script>
+            ```
+          type: object
+          additionalProperties: true
+    Customer:
+      description: |
+        The customer object keeps details such as the tax and shipping address and fraud blocks related to an individual.
+        When supplied with a charge the customer record is updated.
+      type: object
+      additionalProperties: true
+      required:
+        - id
+      properties:
+        id:
+          description: |
+            Unique id to identify the customer of merchant. If no matching customer record is found, a new customer record will be created. If matching Id is found in EP
+            system, the charge will be associated with that customer.
+          type: string
+          maxLength: 63
+        name:
+          description: Full name of customer. _Deprecated use `firstName` and `lastName`_.
+          x-deprecated: true
+          type: string
+          maxLength: 50
+        firstName:
+          description: First name of customer
+          type: string
+          maxLength: 50
+        middleName:
+          description: Middle name of customer. _Deprecated use `firstName` and `lastName`_.
+          x-deprecated: true
+          type: string
+          maxLength: 50
+        lastName:
+          description: Last name of customer
+          type: string
+          maxLength: 50
+        companyName:
+          description: Name of the company for business customers
+          type: string
+          maxLength: 50
+        email:
+          description: Customer email address
+          type: string
+          maxLength: 100
+        streetAddress:
+          description: Customer tax address first line
+          type: string
+          maxLength: 100
+        streetAddress2:
+          description: Customer tax address second line
+          type: string
+          maxLength: 20
+        city:
+          description: Customer city name
+          type: string
+          maxLength: 30
+        stateProvince:
+          description: Customer state or province abbreviation (or full name in some countries)
+          type: string
+          maxLength: 20
+        postalCode:
+          description: Customer postal code
+          type: string
+          maxLength: 20
+        country:
+          description: ISO 3166-1 alpha-2 customer country code. _Deprecated use `countryCode`_.
+          x-deprecated: true
+          type: string
+          minLength: 2
+          maxLength: 2
+        countryCode:
+          description: ISO 3166-1 alpha-2 customer country code.
+          type: string
+          minLength: 2
+          maxLength: 2
+        ipAddress:
+          description: Customer IP address
+          type: string
+          maxLength: 16
+        customerType:
+          description: |
+            Identifies the type of customer to specify individual/business customers.This field is applicable only for
+            India as of now.
+            The supported customer types are
+            * B2B (Business customers)
+            * B2C (Individual customers)
+            * BOTH (Supports both Business and individual customers)
+          enum:
+            - B2B
+            - B2C
+            - BOTH
+          type: string
+        document:
+          description: |
+            Country dependent citizen identifier. Document is sent as part of the customer object only for India to
+            maintain customer's GST ID.
+          type: string
+        documentType:
+          description: |
+            Identifies the type of the data in the document field. Document type is sent as part of the customer object
+            only for India to identify customer's document. By default the document type is GST ID for India.
+          type: string
+    LineItem:
+      description: Details about the item being purchased.
+      type: object
+      additionalProperties: true
+      required:
+        - currency
+        - amount
+        - description
+      properties:
+        currency:
+          description: ISO 4217 Three letter currency code code for the transaction currency (USD, EUR,  JPY, etc)
+          type: string
+          minLength: 3
+          maxLength: 3
+        amount:
+          description: The price of the goods being sold.  The customer will be charged this amount, plus any taxes that are not included in the price.
+          type: number
+        description:
+          description: Description of the items.
+          type: string
+          maxLength: 256
+        quantity:
+          description: The quantity of the items.
+          type: number
+        deliveryMethod:
+          description: The delivery method of the items.
+          type: string
+        taxCode:
+          description: |
+            One of the supported tax codes. If none is specified then the one configured as default by your EP TAM will be used.
+
+            * DG (Digital Good)
+            * VC (Virtual Currency)
+            * NT (Non Taxable)
+            * NA (Unknown)
+            * PG (Physical Goods)
+            * SV (Service)
+            * DG\_INTERNET\_ADS
+            * DG\_ONLINE\_CONTENT_SERVICE
+            * DG\_LIC\_SERVICE\_SOFTWARE_DATABASE
+          type: string
+          minLength: 2
+          maxLength: 64
+        taxAmount:
+          description: Tax amount for this transaction.
+          type: number
+        taxPercent:
+          description: Tax rate for this charge.
+          type: number
+          minimum: 0
+          maximum: 1
+        taxProvider:
+          description: Indicates who calculated tax. Values include 'MERCHANT', 'ADAPTER', 'NONE'
+          enum:
+            - MERCHANT
+            - ADAPTER
+            - NONE
+          type: string
+        taxIncludedInPrice:
+          description: True if tax is included in the amount.  If this field is not specified then then the value configured by your EP TAM will be used.
+          type: boolean
+        baseAmount:
+          description: Transaction amount excluding taxes. Currently sent only for India and Argentina
+          type: number
+        taxDetail:
+          description: |
+            Individual tax percents and their associated tax amounts can be sent as key value pairs.It is currently sent as
+            part of the response only for India to specify the tax split ups CGST,SGST,IGST.
+
+            Example for GST India:
+            ```
+            "taxDetail": {
+                "cgstPercent": "0.09",
+                "sgstPercent": "0.09",
+                "igstPercent": "0.00",
+                "cgstAmount": "18",
+                "sgstAmount": "18",
+                "igstAmount": "0.00"
+              }
+            ```
+          type: object
+          additionalProperties: true
+    Metadata:
+      description: |
+        The metadata object keeps optional merchant and processor specific information that might be needed to complete the payment.
+      type: object
+      additionalProperties: true
+      properties:
+        instrumentConfigId:
+          description: |
+            Used to declare which instrument was used when building the `payment` field values.
+            It should be copied from the `GET paymentmethods` response body field `paymentMethods[].instrumentConfigId`.
+
+            In general EP recommends merchants do not provide a value for this field.
+          type: integer
+        returnURL:
+          description: |
+            Merchant success return page URL.
+
+            This is required in some cases such as when 3D-Secure is enabled. For more information refer to the paymentOption fields in the charge response.
+          type: string
+        pendingURL:
+          description: |
+            Merchant pending return page URL.
+
+            _Deprecated use the `successURL`_
+          x-deprecated: true
+          type: string
+        failureURL:
+          description: |
+            Merchant failure return page URL.
+
+            This is required in some cases such as when 3D-Secure is enabled.
+          type: string
+        cancelURL:
+          description: |
+            Merchant cancel return page URL.
+
+            This is required in some cases such as online banking. The `cancelURL` can be omitted for 3D-Secure.
+          type: string
+        device:
+          description: The display form factor of the device. When provided is used to optimize third party pages such as 3D-Secure.
+          enum:
+            - PC
+            - TABLET
+            - SMARTPHONE
+          type: string
+        userAgent:
+          description: The HTTP User-Agent header from the customer's device. When provided is used to optimize third party pages such as 3D-Secure.
+          type: string
+        locale:
+          description: |
+            This is a 2-letter ISO language code and 2-letter ISO country code separated by underscore.
+            Typically the locale is inferred from the customer's country.
+            When provided is used to optimize third party pages such as 3D-Secure.
+          enum:
+            - en_US
+            - fr_FR
+            - pt_BR
+            - ar_EG
+            - da_DK
+            - de_DE
+            - es_ES
+            - fi_FI
+            - it_IT
+            - ja_JP
+            - ko_KR
+            - nl_NL
+            - no_NO
+            - pl_PL
+            - ru_RU
+            - sv_SE
+            - tr_TR
+          type: string
+        disableProxy:
+          description: For EP internal use
+          x-internal: true
+          type: boolean
+        createStoredPaymentProfile:
+          description: For EP internal use
+          x-internal: true
+          type: boolean
+    PaymentProfileStatus:
+      description: |
+        For some purchases a new stored payment profile is created as part of the charge, for example, when processing an INITIAL recurring purchase.
+        For these cases the details about the new payment profile are returned in a `paymentProfile` object within the charge.
+
+        __Important__ in some cases the `paymentProfile` will not be returned in the initial `POST charges` response; instead, the section will be
+        added to the charge later and made available to the merchant using a real-time notification callback.
+      type: object
+      additionalProperties: true
+      required:
+        - id
+        - paymentMethod
+        - paymentMethodType
+        - state
+      properties:
+        id:
+          description: |
+            The ID of the newly created payment profile.  Supply this value for subsequent purchases as `charge.payment.storedPaymentProfileId`.
+          type: string
+        paymentMethod:
+          description: |
+            This typically mirrors the value supplied as `charge.payment.paymentMethod`; however, in some cases this may be a more specialized
+            value such as VISA in lieu of CREDIT\_CARD.  Typical values are VISA, MASTERCARD, CASH, etc.
+          type: string
+        paymentMethodType:
+          description: |
+            This mirrors the value returned in `charge.payment.paymentType`.  The type of payment method used.
+          enum:
+            - CREDIT_CARD
+            - DEBIT_CARD
+            - PREPAID_CARD
+            - BANK_TRANSFER
+            - VIRTUAL_ACCOUNT
+            - DIRECT_DEBIT
+            - CASH
+            - CHECK
+            - OFFER
+            - WALLET
+            - CARRIER_BILLING
+          type: string
+        type:
+          description: |
+            This mirrors the value supplied in `charge.recurring.type`.  This field is omitted for non-recurring charges.
+          enum:
+            - INITIAL
+            - RENEWAL
+          type: string
+        state:
+          description: |
+            Indicates if the stored payment profile is ready to be used for a new charge.
+
+            * FAILED failed to create payment profile.
+            * UNVERIFIED payment profile was created successfully, but unverified OR pending on customer action. No success transaction completed with this recurring.
+            * VERIFIED payment profile was created successfully, and verified because there is success transaction completed with this payment profile.
+            * EXPIRED The payment profile is expired or removed.
+          enum:
+            - FAILED
+            - UNVERIFIED
+            - VERIFIED
+            - EXPIRED
+          type: string
+    Payment:
+      description: |
+        The payment object keeps details such as the billing address and account number related to a specific payment method.
+        When supplied with a charge the customer record is typically not updated with the billing address. To update the customer record include the new address in the customer object.
+
+        For credit card payments, it is possible to encrypt the card number in the browser and send it encrypted all the way to our backend payment processing servers.
+        This feature is known as client-side encryption and may greatly reduce a merchant's risk and PCI concerns.
+        Passing a hash of the public key returned by /api/v3/encryptionkey API in the header of the request indicates that the credit card number is encrypted.
+        A set of sample files that show how to use the client-side encryption feature can be downloaded here: <a href="zips/client-side-encryption-sample-files.zip" download>download it now</a>
+      type: object
+      additionalProperties: true
+      required:
+        - countryCode
+        - paymentMethod
+      properties:
+        bic:
+          x-internal: true
+          type: string
+        middleName:
+          description: Middle name of customer. _Deprecated use `firstName` and `lastName`_.
+          x-deprecated: true
+          type: string
+          maxLength: 50
+        expirationDate:
+          description: |
+            Expiration Date of credit card in YYYY-MM format
+
+            This value is masked and an empty string is returned on retrieval.
+          type: string
+        emailAddress:
+          description: Customer email address
+          type: string
+          maxLength: 100
+        checkNumber:
+          x-deprecated: true
+          type: string
+        pin5:
+          x-internal: true
+          type: string
+        password:
+          description: |
+            Customer authentication secret such as a OTP
+
+            This value is masked and an empty string is returned on retrieval.
+          type: string
+        channel:
+          description: The customer method of payment for some paymentType CASH instruments. Typically mirrors the `paymentMethod` field.
+          type: string
+        accountType:
+          x-deprecated: true
+          type: string
+        pin2:
+          x-internal: true
+          type: string
+        securityCode:
+          description: |
+            Security Code or CVV of customer credit card
+
+            This value is never persisted and an empty string is returned on retrieval.
+          type: string
+        dateOfBirth:
+          description: Customer date of birth in yyyy-mm-dd format
+          type: string
+          maxLength: 10
+        countryCode:
+          description: ISO 3166-1 alpha-2 customer country code. To ensure proper conversion rates this value must be accurate.
+          type: string
+          minLength: 2
+          maxLength: 2
+        bankNumber:
+          description: Customer bank number used with BANK\_TRANSFER
+          type: string
+        lastName:
+          description: Last name of customer. Some instruments use the full name passed as `accountHolder`.
+          type: string
+          maxLength: 50
+        documentType:
+          description: |
+            Identifies the type of the data in the `document` field.
+
+            Typical values are from DNI, CI, CPF, CNPJ, RUT, CURP, GST
+          type: string
+        bankName:
+          x-deprecated: true
+          type: string
+        cardNumber:
+          description: |
+            Customer credit card number
+
+            On retrieval most digits are masked with X's; only the last four digits are returned.
+          type: string
+        icaAuthConsentText:
+          x-deprecated: true
+          type: string
+        branchCode:
+          description: |
+            This value is masked and an empty string is returned on retrieval.
+          x-deprecated: true
+          type: string
+        stateProvince:
+          description: Customer state or province abbreviation (or full name in some countries)
+          type: string
+          maxLength: 20
+        paymentType:
+          description: |
+            The type of payment method used.
+
+            Typically not set directly as it is inferred from paymentMethod.
+          enum:
+            - CREDIT_CARD
+            - DEBIT_CARD
+            - PREPAID_CARD
+            - BANK_TRANSFER
+            - VIRTUAL_ACCOUNT
+            - DIRECT_DEBIT
+            - CASH
+            - CHECK
+            - OFFER
+            - WALLET
+            - CARRIER_BILLING
+          type: string
+        convenienceStoreCode:
+          x-deprecated: true
+          type: string
+        pin4:
+          x-internal: true
+          type: string
+        validFromDate:
+          x-deprecated: true
+          type: string
+        firstName:
+          description: First name of customer. Some instruments use the full name passed as `accountHolder`.
+          type: string
+          maxLength: 50
+        streetAddress2:
+          description: Customer billing address second line
+          type: string
+          maxLength: 20
+        bankCode:
+          description: The customer method of payment for some paymentType BANK\_TRANSFER instruments. Typically mirrors the `paymentMethod` field.
+          type: string
+        paymentMethod:
+          description: |
+            Customer method of payment. Debit Card is not supported for country code BR.
+
+            This value is obtained from the `GET paymentmethods` API. Typical values are VISA, MASTERCARD, AMERICAN\_EXPRESS, DISCOVER, RUPAY, MAESTRO, CREDIT\_CARD, DEBIT\_CARD.
+          type: string
+        manualId:
+          x-deprecated: true
+          type: string
+        pin:
+          description: |
+            Customer authentication PIN
+
+            This value is masked and an empty string is returned on retrieval.
+          type: string
+        resendPin:
+          description: Can be temporarily set true to force a OTP to be resent to the customer. When read it always has value false.
+          x-internal: true
+          type: boolean
+        storedPaymentProfileId:
+          description: Supply the ID for a stored payment profile instead of providing explicit customer details.
+          type: string
+        iban:
+          description: |
+            On retrieval most digits are masked with X's; only the last four digits are returned.
+          x-internal: true
+          type: string
+        cardType:
+          description: The customer method of payment for some paymentType CREDIT\_CARD instruments. Typically mirrors the `paymentMethod` field.
+          x-internal: true
+          type: string
+        accountNumber:
+          description: |
+            On retrieval most digits are masked with X's; only the last four digits are returned.
+          x-deprecated: true
+          type: string
+        icaAuthConsentButton:
+          x-deprecated: true
+          type: string
+        document:
+          description: |
+            Country dependent citizen identifier such as
+
+            * CPF/CNPJ in BR
+            * DNI/CUIT/CUIL in AR and PE
+            * CURP in MX
+            * RUT in CL
+            * GST in IN
+
+            This value is masked and an empty string is returned on retrieval.
+          type: string
+        pin3:
+          x-internal: true
+          type: string
+        bankAddress:
+          x-deprecated: true
+          type: string
+        city:
+          description: Customer city name
+          type: string
+          maxLength: 30
+        furigana:
+          x-deprecated: true
+          type: string
+        accountHolder:
+          description: Full name of customer. Some payments use the full name instead of `firstName` and `lastName`.
+          type: string
+          maxLength: 100
+        userId:
+          x-internal: true
+          type: string
+        authorizationId:
+          x-deprecated: true
+          type: string
+        postalCode:
+          description: Customer postal code
+          type: string
+          maxLength: 20
+        issueNumber:
+          description: some MAESTRO providers use this instead of `expirationDate`
+          x-deprecated: true
+          type: string
+        bankCity:
+          x-deprecated: true
+          type: string
+        manualType:
+          x-deprecated: true
+          type: string
+        streetAddress:
+          description: Customer billing address first line
+          type: string
+          maxLength: 100
+        phoneNumber:
+          description: Customer mobile number frequently used to receive one time passcode
+          type: string
+        token:
+          x-internal: true
+          type: string
+    PaymentCredit:
+      description: |
+        The payment object keeps details such as the billing address and account number related to a specific payment method.
+        The customer record is typically not updated with the billing address.
+      type: object
+      additionalProperties: true
+      required:
+        - storedPaymentProfileId
+      properties:
+        paymentMethod:
+          description: |
+            Customer method of payment.
+
+            This value is obtained from the `GET paymentmethods` API. Typical values are ACH, CREDIT\_CARD, DEBIT\_CARD.
+          type: string
+        paymentType:
+          description: |
+            The type of payment method used.
+
+            Typically not set directly as it is inferred from paymentMethod.
+          enum:
+            - CREDIT_CARD
+            - DEBIT_CARD
+            - PREPAID_CARD
+            - BANK_TRANSFER
+            - VIRTUAL_ACCOUNT
+            - DIRECT_DEBIT
+            - CASH
+            - CHECK
+            - OFFER
+            - WALLET
+            - CARRIER_BILLING
+          type: string
+        token:
+          x-internal: true
+          type: string
+        storedPaymentProfileId:
+          description: Supply the ID for a stored payment profile. It is required and the payment profile must be KYC VERIFIED.
+          type: string
+        firstName:
+          description: First name of customer. Some instruments use the full name passed as `accountHolder`.
+          type: string
+          maxLength: 50
+        middleName:
+          description: Middle name of customer. _Deprecated use `firstName` and `lastName`_.
+          x-deprecated: true
+          type: string
+          maxLength: 50
+        lastName:
+          description: Last name of customer. Some instruments use the full name passed as `accountHolder`.
+          type: string
+          maxLength: 50
+        streetAddress:
+          description: Customer billing address first line
+          type: string
+          maxLength: 100
+        streetAddress2:
+          description: Customer billing address second line
+          type: string
+          maxLength: 20
+        city:
+          description: Customer city name
+          type: string
+          maxLength: 30
+        stateProvince:
+          description: Customer state or province abbreviation (or full name in some countries)
+          type: string
+          maxLength: 20
+        postalCode:
+          description: Customer postal code
+          type: string
+          maxLength: 20
+        countryCode:
+          description: ISO 3166-1 alpha-2 customer country code. To ensure proper conversion rates this value must be accurate.
+          type: string
+          minLength: 2
+          maxLength: 2
+        emailAddress:
+          description: Customer email address
+          type: string
+          maxLength: 100
+        phoneNumber:
+          description: Customer mobile number frequently used to receive one time passcode
+          type: string
   securitySchemes:
-    main_auth:
-      type: oauth2
-      flows:
-        implicit:
-          authorizationUrl: 'http://example.com/api/oauth/dialog'
-          scopes:
-            'read:users': read users info
-            'write:users': modify or remove users
-    api_key:
+    hmac_header:
+      type: http      
+      in: header      
+      scheme: basic
+
+    apiKey:
       type: apiKey
       in: header
-      name: api_key
-    basic_auth:
-      type: http
-      scheme: basic
+      name: X-API-KEY
+      description: |
+        The merchant's account name or ID.
+        This is used both to authenticate the caller and to also is usually used to scope the merchant account
+        for which results are returned.
+      example: "1"
+      required: false
+    appId:
+      type: apiKey
+      in: header
+      name: X-APP-ID
