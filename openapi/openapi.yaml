@@ -4,14 +4,14 @@ info:
   version: 'v3'
   description: |
     These methods are for payment verification and charge / credit processing, as well as charge / credit history
-  servers:
-    -
-      url: https://{server.com}/api/v3    
+servers:
+  -
+    url: https://{server.com}/api/v3    
 paths:
   /charges/{id}:
-    x-amf-displayName: Get a charge / credit
+    summary: Get a charge / credit
     get:
-      operationId: Get Charge
+      summary: GetCharge
       description: |
         This method retrieves a Charge or Credit, using the ID assigned by merchant (or generated, if no ID was provided)
       parameters:
@@ -53,7 +53,7 @@ paths:
         - apiKey: []
           appId:  []
     post:
-      operationId: Update Charge
+      summary: UpdateCharge
       description: |
         This method updates an existing Charge / Credit by issuing a new command to it.
       parameters:
@@ -100,9 +100,9 @@ paths:
         -
           hmac_header: []
   /charges:
-    x-amf-displayName: Submit Charge, Searching Charges / Credits
+    summary: Submit Charge, Searching Charges / Credits
     get:
-      operationId: Search Charges/Credits
+      summary: SearchCharges/Credits
       description: This method retrieves a list of charges / Credits, based on the filter criteria.
       parameters:
         -
@@ -311,7 +311,7 @@ paths:
         -
           hmac_header: []
     post:
-      operationId: Submit Charge
+      summary: Submit Charge
       description: |
         This method attempts to charge a customer the specified amount. If the customer does not already exist, a new
         customer will be created.
@@ -349,9 +349,9 @@ paths:
         -
           hmac_header: []
   /credits:
-    x-amf-displayName: Submit Credit
+    summary: Submit Credit
     post:
-      operationId: Submit Credit
+      summary: Submit Credit
       description: |
         This method attempts to credit a customer the specified amount. If the customer does not already exist, a new
         customer will be created.
@@ -389,9 +389,9 @@ paths:
         -
           hmac_header: []
   /charges/{id}/taxinvoice:
-    x-amf-displayName: tax invoices for charge
+    summary: tax invoices for charge
     get:
-      operationId: Search Tax Invoices
+      summary: Search Tax Invoices
       description: |
         This method retrieves list of tax invoices stored as part of a specific charge.
       parameters:
@@ -454,9 +454,9 @@ paths:
         -
           hmac_header: []
   /charges/{id}/taxinvoice/{taxInvoiceId}:
-    x-amf-displayName: Download tax invoice
+    summary: Download tax invoice
     get:
-      operationId: Get Tax Invoice
+      summary: Get Tax Invoice
       description: |
         This method downloads a specific tax invoice for an existing transaction.
       parameters:
@@ -505,7 +505,7 @@ paths:
         -
           hmac_header: []
   /charges/{chargeId}/refundAvailable:
-    x-amf-displayName: Refund available for charge
+    summary: Refund available for charge
     get:
       summary: retrieves the refundable amount
       description: |
