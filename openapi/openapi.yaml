@@ -6,7 +6,7 @@ info:
     These methods are for payment verification and charge / credit processing, as well as charge / credit history
 servers:
   -
-    url: https://{server.com}/api/v3    
+    url: /api/v3    
 paths:
   /charges/{id}:
     summary: Get a charge / credit
@@ -2266,9 +2266,9 @@ components:
           type: string
   securitySchemes:
     hmac_header:
-      type: http      
+      type: apiKey      
       in: header      
-      scheme: basic
+      name: HMAC headers
 
     apiKey:
       type: apiKey
@@ -2278,8 +2278,6 @@ components:
         The merchant's account name or ID.
         This is used both to authenticate the caller and to also is usually used to scope the merchant account
         for which results are returned.
-      example: "1"
-      required: false
     appId:
       type: apiKey
       in: header
